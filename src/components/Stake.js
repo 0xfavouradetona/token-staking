@@ -2,7 +2,13 @@ import React, { useState } from "react";
 import Web3Modal from "web3modal";
 import { ethers } from "ethers";
 import { CoinbaseWalletSDK } from "@coinbase/wallet-sdk";
-import { abi, STAKING_CONTRACT_ADDRESS } from "../constants";
+import {
+  abi,
+  STAKING_CONTRACT_ADDRESS,
+  TOKEN_ADDRESS,
+  ERC20_ABI,
+} from "../constants";
+import getContract from "../utils/getContract";
 
 const providerOptions = {
   coinbasewallet: {
@@ -16,6 +22,12 @@ const providerOptions = {
 
 const Stake = () => {
   const [web3Provider, setWeb3Provider] = useState(null);
+  const [amount, setAmount] = useState(0);
+
+  const handleAmount = (e) => {
+    setAmount(e.target.value);
+  };
+
   async function connectWallet() {
     try {
       let web3Modal = new Web3Modal({
@@ -40,25 +52,46 @@ const Stake = () => {
       console.log(stakingContract);
       const stakedBalance = await stakingContract.totalStaked();
       const convertedBalance = ethers.utils.formatEther(stakedBalance);
-      document.getElementById('balance').innerHTML = convertedBalance;
+      document.getElementById("balance").innerHTML = convertedBalance;
       console.log(convertedBalance);
 
-      const tx = await stakingContract.deposit({
-        to: stakingContract,
-        value: ethers.utils.formatEther("0.25"),
-      })
-      console.log(tx);
+      // const tx = await stakingContract.deposit({
+      //   to: stakingContract,
+      //   value: ethers.utils.formatEther("0.25"),
+      // });
+      // console.log(tx);
     } catch (error) {
       console.error(error);
     }
   }
 
+  async function stake() {
+    if (amount < 0) return;
+
+    //  approve staking contract
+    const Erc20contract = getContract(true, TOKEN_ADDRESS, ERC20_ABI);
+
+    const contract = getContract(true);
+
+    const ApproveTxn = await Erc20contract.approve(
+      STAKING_CONTRACT_ADDRESS,
+      "1000000000000000000000"
+    );
+    const result = ApproveTxn.wait();
+    const amtToDeposit = ++amount * 10 ** 18;
+    const txn = await contract.deposit(amtToDeposit);
+
+    console.log("transaction pending");
+    await txn.wait();
+    console.log("transaction confirmed");
+  }
+
   return (
-    <div className="max-w-lg mx-auto my-10 bg-white p-8 rounded-xl shadow shadow-slate-300">
+    <div className="max-w-lg p-8 mx-auto my-10 bg-white shadow rounded-xl shadow-slate-300">
       <h1 className="text-4xl font-medium">RBTR Staking Dapp</h1>
 
       <div className="my-5">
-        <div className="w-full text-center py-3 my-3 border flex space-x-2 items-center justify-center border-slate-200 rounded-lg text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:shadow transition duration-150">
+        <div className="flex items-center justify-center w-full py-3 my-3 space-x-2 text-center transition duration-150 border rounded-lg border-slate-200 text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:shadow">
           {web3Provider == null ? (
             //run if null,
             <button
@@ -84,39 +117,44 @@ const Stake = () => {
       <div action="" className="my-10">
         <div className="flex flex-col space-y-5">
           <label htmlFor="number">
-            <p className="font-medium text-slate-700 pb-2">
+            <p className="pb-2 font-medium text-slate-700">
               Total Arbritage Token Staked <span id="balance"></span>
             </p>
-            <p className="font-medium text-slate-700 pb-2">
+            <p className="pb-2 font-medium text-slate-700">
               Available Arbritage Token To Stake
             </p>
             <input
               id="number"
               name="number"
               type="number"
-              className="w-full py-3 border border-slate-200 rounded-lg px-3 focus:outline-none focus:border-slate-500 hover:shadow"
+              value={amount}
+              onChange={handleAmount}
+              className="w-full px-3 py-3 border rounded-lg border-slate-200 focus:outline-none focus:border-slate-500 hover:shadow"
               placeholder="Enter amount to stake"
             />
-            <button className="py-2 px-2 font-medium text-white bg-[#7245FA] rounded transition duration-300">
+            <button
+              onClick={stake}
+              className="py-2 px-2 font-medium text-white bg-[#7245FA] rounded transition duration-300"
+            >
               Stake
             </button>
           </label>
           <label htmlFor="number">
-            <p className="font-medium text-slate-700 pb-2">
+            <p className="pb-2 font-medium text-slate-700">
               Available Arbritage Token To Claim
             </p>
             <input
               id="number"
               name="number"
               type="number"
-              className="w-full py-3 border border-slate-200 rounded-lg px-3 focus:outline-none focus:border-slate-500 hover:shadow"
+              className="w-full px-3 py-3 border rounded-lg border-slate-200 focus:outline-none focus:border-slate-500 hover:shadow"
               placeholder="Amount"
             />
             <button className="py-2 px-2 font-medium text-white bg-[#7245FA] rounded transition duration-300">
               Claim
             </button>
           </label>
-          <button className="w-full py-3 font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg border-indigo-500 hover:shadow inline-flex space-x-2 items-center justify-center">
+          <button className="inline-flex items-center justify-center w-full py-3 space-x-2 font-medium text-white bg-indigo-600 border-indigo-500 rounded-lg hover:bg-indigo-500 hover:shadow">
             <span>Claim All</span>
           </button>
         </div>
