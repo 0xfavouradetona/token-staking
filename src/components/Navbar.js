@@ -14,7 +14,6 @@ const providerOptions = {
 };
 
 const Navbar = () => {
-  const [click, setClick] = useState(false);
   const [web3Provider, setWeb3Provider] = useState(null);
   async function connectWallet() {
     try {
@@ -30,6 +29,10 @@ const Navbar = () => {
       if (web3ModalProvider) {
         setWeb3Provider(web3ModalProvider);
       }
+      const provider = new ethers.providers.Web3Provider(web3ModalProvider);
+      const signer = await provider.getSigner();
+      console.log(signer);
+      console.log(web3ModalProvider);
     } catch (error) {
       console.error(error);
     }
