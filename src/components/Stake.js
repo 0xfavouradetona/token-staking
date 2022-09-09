@@ -56,12 +56,12 @@ const Stake = () => {
       );
       console.log(stakingContract);
       let ERC = " ERC";
-      const stakedBalance = await stakingContract.s_totalSupply();
+      const stakedBalance = await stakingContract.totalStakeTokenBalance();
       const convertedBalance = ethers.utils.formatEther(stakedBalance);
       document.getElementById("balance").innerHTML = convertedBalance + ERC;
       console.log(convertedBalance);
 
-      const stakedBalances = await stakingContract.s_balances();
+      const stakedBalances = await stakingContract.totalStaked();
       const convertedBalances = ethers.utils.formatEther(stakedBalances);
       document.getElementById("balance").innerHTML = convertedBalances + ERC;
       console.log(convertedBalance);
@@ -91,6 +91,7 @@ const Stake = () => {
       convertApprove
     );
    const tnxHash = await ApproveTxn.hash;
+   console.log(tnxHash);
    approveTnx(tnxHash);
    stake()
 
@@ -104,7 +105,7 @@ const Stake = () => {
     const stakeValue = document.getElementById('number').value;
     const convertedStake = stakeValue * 10 ** 18;
     const convertedValue = convertedStake.toString();
-    const StakingTnx = await stakingContract.stake(convertedValue)
+    const StakingTnx = await stakingContract.deposit(convertedValue)
     const getStakingHash = await StakingTnx.hash;
     document.getElementById('status').innerHTML = status + getStakingHash;
   }
