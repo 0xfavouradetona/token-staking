@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Web3Modal from "web3modal";
 import { ethers } from "ethers";
 import { CoinbaseWalletSDK } from "@coinbase/wallet-sdk";
@@ -23,10 +23,15 @@ const providerOptions = {
 const Stake = () => {
   const [web3Provider, setWeb3Provider] = useState(null);
   const [amount, setAmount] = useState(0);
+  const [stakeTnx, approveTnx] = useState(null);
 
   const handleAmount = (e) => {
     setAmount(e.target.value);
   };
+
+  useEffect(() => {
+    connectWallet();
+  }, 1000)
 
   async function connectWallet() {
     try {
@@ -50,9 +55,15 @@ const Stake = () => {
         signer
       );
       console.log(stakingContract);
-      const stakedBalance = await stakingContract.totalStaked();
+      let ERC = " ERC";
+      const stakedBalance = await stakingContract.s_totalSupply();
       const convertedBalance = ethers.utils.formatEther(stakedBalance);
-      document.getElementById("balance").innerHTML = convertedBalance;
+      document.getElementById("balance").innerHTML = convertedBalance + ERC;
+      console.log(convertedBalance);
+
+      const stakedBalances = await stakingContract.s_balances();
+      const convertedBalances = ethers.utils.formatEther(stakedBalances);
+      document.getElementById("balance").innerHTML = convertedBalances + ERC;
       console.log(convertedBalance);
 
       // const tx = await stakingContract.deposit({
@@ -64,27 +75,60 @@ const Stake = () => {
       console.error(error);
     }
   }
-
-  async function stake() {
+  let status = "Success. Transaction Hash: ";
+  async function approve(stake) {
     if (amount < 0) return;
 
     //  approve staking contract
     const Erc20contract = getContract(true, TOKEN_ADDRESS, ERC20_ABI);
 
     const contract = getContract(true);
-
+    const approveValue = document.getElementById('number').value;
+    const convertedApprove = approveValue * 10 ** 18;
+    const convertApprove = convertedApprove.toString();
     const ApproveTxn = await Erc20contract.approve(
       STAKING_CONTRACT_ADDRESS,
-      "1000000000000000000000"
+      convertApprove
     );
-    const result = ApproveTxn.wait();
-    const amtToDeposit = ++amount * 10 ** 18;
-    const txn = await contract.deposit(amtToDeposit);
+   const tnxHash = await ApproveTxn.hash;
+   approveTnx(tnxHash);
+   stake()
 
-    console.log("transaction pending");
-    await txn.wait();
-    console.log("transaction confirmed");
+   async function stake(){
+    if(amount < 0) return;
+
+    //stake value from staking contract
+    const stakingContract = getContract(true, STAKING_CONTRACT_ADDRESS, abi);
+    const contract = getContract(true);
+    console.log(stakingContract)
+    const stakeValue = document.getElementById('number').value;
+    const convertedStake = stakeValue * 10 ** 18;
+    const convertedValue = convertedStake.toString();
+    const StakingTnx = await stakingContract.stake(convertedValue)
+    const getStakingHash = await StakingTnx.hash;
+    document.getElementById('status').innerHTML = status + getStakingHash;
   }
+
+  }
+
+  async function withdraw(){
+    if(amount < 0) return;
+
+    //withdraw value from staking contract
+    const stakingContract = getContract(true, STAKING_CONTRACT_ADDRESS, abi);
+    const contract = getContract(true);
+
+    const stakeValue = document.getElementById('numberWithdraw').value;
+    const convertedStake = stakeValue * 10 ** 18;
+    const convertedValue = convertedStake.toString();
+    const StakingTnx = await stakingContract.withdraw(convertedValue)
+    const getStakingHash = await StakingTnx.hash;
+    document.getElementById('withdrawStatus').innerHTML = status + getStakingHash;
+  }
+
+
+ 
+
 
   return (
     <div className="max-w-lg p-8 mx-auto my-10 bg-white shadow rounded-xl shadow-slate-300">
@@ -133,27 +177,29 @@ const Stake = () => {
               placeholder="Enter amount to stake"
             />
             <button
-              onClick={stake}
+              onClick={approve}
               className="py-2 px-2 font-medium text-white bg-[#7245FA] rounded transition duration-300"
             >
-              Stake
+              {stakeTnx ? "stake": "approve"}
             </button>
           </label>
+          <p className="pb-2 font-medium text-slate-700" id="status" style={{color: "green"}}></p>
           <label htmlFor="number">
             <p className="pb-2 font-medium text-slate-700">
-              Available Arbritage Token To Claim
+              Withdraw Token
             </p>
             <input
-              id="number"
+              id="numberWithdraw"
               name="number"
               type="number"
               className="w-full px-3 py-3 border rounded-lg border-slate-200 focus:outline-none focus:border-slate-500 hover:shadow"
               placeholder="Amount"
             />
-            <button className="py-2 px-2 font-medium text-white bg-[#7245FA] rounded transition duration-300">
-              Claim
+            <button className="py-2 px-2 font-medium text-white bg-[#7245FA] rounded transition duration-300" onClick={withdraw}>
+              Withdraw
             </button>
           </label>
+          <p id="withdrawStatus" style={{color: "green"}}></p>
           <button className="inline-flex items-center justify-center w-full py-3 space-x-2 font-medium text-white bg-indigo-600 border-indigo-500 rounded-lg hover:bg-indigo-500 hover:shadow">
             <span>Claim All</span>
           </button>
